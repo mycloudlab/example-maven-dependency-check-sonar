@@ -1,8 +1,6 @@
 # Exemplo de uso do dependency check com sonar
 
-Neste repositório temos um exemplo de um projeto maven que possui uma dependencia vunerável.
-
-A idéia é que o plugin dependency check da OWASP seja executado e gere o report para ser observado no repositório do sonar.
+Neste repositório temos um exemplo de um projeto maven que possui uma dependência vunerável, demonstramos o uso do plugin dependency check da OWASP sendo executado e o report gerado é enviado para o sonar, podendo impedir a continuidade do pipeline via script de verificação do quality gate do sonar. Também abordamos a supressão de falsos positivo.
 
 ## Montagem do laboratório 
 
@@ -89,9 +87,10 @@ Para garantir o funcionamento do plugin e testar o report, vamos adicionar a dep
 
 ```xml
 <dependency>
-  <groupId>org.apache.tomcat</groupId>
-  <artifactId>tomcat</artifactId>
-  <version>9.0.30</version>
+    <groupId>org.apache.tomcat</groupId>
+    <artifactId>tomcat</artifactId>
+    <version>9.0.30</version>
+    <type>pom</type>
 </dependency>
 ```
 
@@ -120,3 +119,40 @@ FALHOU
 NOTA: O script requer que o utilitário `jq` esteja disponível. 
 
 Instale o utilitário usando o comando adequado ao seu sistema operacional.
+
+
+### Tratando Falsos positivo
+
+O verificador de dependência detecta o uso de vulnerabilidades conhecidas, procurando correspondências das dependências no projeto Maven com os componentes de software listados nas CVEs. Esse processo é um pouco superficial, porque eles têm esquemas diferentes para identificar o software. O Maven identifica dependências usando GroupId, ArtifactId and Version (GAV) e CVEs identificam software usando Common Platform Enumeration (CPE).
+
+Esse processo então pode gerar falsos positivos. Portanto, independentemente do CPE, é sempre prudente ler a descrição do CVE e tirar nossas próprias conclusões.
+
+Para impedir o reaparecimento de falsos positivos, podemos suprimir os erros reportados. Fazemos isso configurando um arquivo de supressão e informamos no pom.xml usando a opção suppressionFiles no pom.xml, Abaixo vemos o exemplo dessa configuração.
+
+```xml
+<build>
+    <plugins>
+      <plugin>
+        <groupId>org.owasp</groupId>
+        <artifactId>dependency-check-maven</artifactId>
+        <configuration>
+          <suppressionFiles>${basedir}/suppressed.xml</suppressionFiles>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+```
+
+O conteúdo do arquivo suppressed.xml deve ser o seguinte:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+</suppressions>
+```
+
+Para informar a supressão de uma dependência devemos adicionar o conteúdo de supressão ao arquivo, o conteúdo para supressão é feito no report clicando no botão suppress conforme imagem abaixo e copiando o conteudo para dentro do arquivo:
+
+![Supressão de erros do dependency check](images/suppress.gif)
+
+Com isso o erro não é mais alertado nos reports do plugin do dependency check.
